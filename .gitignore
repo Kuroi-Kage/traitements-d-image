@@ -1,2 +1,5 @@
-.refact/
+__pycache__/
+*.py[cod]
+.pytest_cache/
 .venv/
+img_teste/
