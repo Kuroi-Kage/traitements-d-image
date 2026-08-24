@@ -18,7 +18,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:4200",
-        "https://traitements-dimage.onrender.com",
+        "https://imatrixa.vercel.app/",
         ],
     allow_methods=["*"],
     allow_headers=["*"],
