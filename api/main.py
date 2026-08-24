@@ -16,7 +16,10 @@ app = FastAPI(title="API de traitement d'image")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200"],
+    allow_origins=[
+        "http://localhost:4200",
+        "https://traitements-dimage.onrender.com",
+        ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
