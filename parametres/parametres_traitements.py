@@ -8,6 +8,14 @@ class ParametresTraitement:
         self.taille_noyau_filtre = 3
         self.seuil_binarisation = 127
         
+        self.angle_rotation = 0
+        self.nouvelle_largeur = None
+        self.nouvelle_hauteur = None
+        self.crop_x = 0
+        self.crop_y = 0
+        self.crop_largeur = None
+        self.crop_hauteur = None
+        
     def get_valeur(self, cle, defaut=None):
         return getattr(self, cle, defaut)
     

@@ -47,3 +47,34 @@ class ConversionNiveauGris(Traitement):
         return image
     
     
+class Rotation(Traitement):
+    nom = "Rotation"
+    
+    def appliquer(self, image, params):
+        angle = params.get_valeur("angle_rotation", 0)
+        hauteur, largeur = image.shape[:2]
+        centre = (largeur // 2, hauteur // 2)
+        matrice = cv2.getRotationMatrix2D(centre, angle, 1.0)
+        return cv2.warpAffine(image, matrice, (largeur, hauteur))
+    
+class Redimensionnement(Traitement):
+    nom = "Redimensionnement"
+    
+    def appliquer(self, image, params):
+        largeur = params.get_valeur("nouvelle_largeur")
+        hauteur = params.get_valeur("nouvelle_hauteur")
+        if not largeur or not hauteur:
+            raise ValueError("nouvelle_largeur et nouvelle_hauteur sont requis")
+       
+        return cv2.resize(image, (largeur, hauteur))
+    
+class Recadrage(Traitement):
+    nom = "Recadrage"
+    
+    def appliquer(self, image, params):
+        hauteur_image, largeur_image = image.shape[:2]
+        x = params.get_valeur("crop_x", 0)
+        y = params.get_valeur("crop_y", 0)
+        largeur = params.get_valeur("crop_largeur") or largeur_image
+        hauteur = params.get_valeur("crop_hauteur") or hauteur_image
+        return image[y:y + hauteur, x:x + largeur]

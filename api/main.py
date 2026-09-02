@@ -5,11 +5,12 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from services.interpreteur import Interpreteur
 
 from api.session import session
 from traitements.traitements_image import (
     Binarisation, ConversionNiveauGris, DetectionContours, 
-    EgalisationHistogramme, Filtrage,
+    EgalisationHistogramme, Filtrage,Rotation, Recadrage, Redimensionnement
 )
 
 app = FastAPI(title="API de traitement d'image")
@@ -18,6 +19,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:4200",
+        "http://127.0.0.1:4200",
         "https://imatrixa.vercel.app",
         ],
     allow_credentials=True,
@@ -27,15 +29,21 @@ app.add_middleware(
 
 TRAITEMENTS = {
     "egalisation": EgalisationHistogramme,
-    "niveau_de_gris": ConversionNiveauGris,
+    "niveaux_de_gris": ConversionNiveauGris,
     "binarisation": Binarisation,
     "filtrage": Filtrage,
     "contours": DetectionContours,
+     "rotation": Rotation,
+    "recadrage": Recadrage,
+    "redimensionnement": Redimensionnement,
 }
 
 class ParametreRequete(BaseModel):
     cle: str
     valeur: int
+    
+class InstructionsRequete(BaseModel):
+    instructions: str
     
 def image_vers_base64(image: np.ndarray) -> str:
     succes, buffer = cv2.imencode(".png", image)
@@ -64,14 +72,56 @@ def applique_traitement(session_id: str, nom_traitement: str):
         raise HTTPException(status_code=404, detail=f"Traitement inconnu : {nom_traitement}")
     
     try:
-        controleur = session.obtenir(session_id)
-        resultat = controleur.applique_traitement(classe_traitement())
+        controlleur = session.obtenir(session_id)
+        resultat = controlleur.applique_traitement(classe_traitement())
     except KeyError:
         raise HTTPException(status_code=404, detail="Session inconnue")
     except ValueError as erreur:
         raise HTTPException(status_code=400, detail=str(erreur))
     
     return {"image": image_vers_base64(resultat)}
+
+@app.post("/api/images/{session_id}/instructions")
+def appliquer_instructions(session_id: str, requete: InstructionsRequete):
+    """Cas d'utilisation « Interpréter des instructions en langage naturel »."""
+    try:
+        controleur = session.obtenir(session_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Session inconnue")
+
+    try:
+        interpreteur = Interpreteur()
+        etapes = interpreteur.interpreter(requete.instructions)
+    except Exception as erreur:
+        raise HTTPException(status_code=502, detail=f"Erreur du service IA : {erreur}")
+    
+    if not etapes:
+        raise HTTPException(
+            status_code=422,
+            detail="Aucun traitement reconnu dans cette instruction.",
+        )
+
+    labels_appliques = []
+    try:
+        for etape in etapes:
+            nom = etape["traitement"]
+            for cle, valeur in etape.get("parametres", {}).items():
+                try:
+                    controleur.config_parametre(cle, valeur)
+                except AttributeError:
+                    pass  
+
+            classe_traitement = TRAITEMENTS[nom]
+            controleur.applique_traitement(classe_traitement())
+            labels_appliques.append(nom)
+             
+    except KeyError as erreur:
+        raise HTTPException(status_code=422, detail=f"Traitement invalide proposé par l'IA : {erreur}")
+
+    return {
+        "image": image_vers_base64(controleur.modele.image_courante),
+        "traitements_appliques": labels_appliques,
+    }
 
 
 @app.post("/api/images/{session_id}/annuler")
