@@ -16,6 +16,15 @@ class ParametresTraitement:
         self.crop_largeur = None
         self.crop_hauteur = None
         
+        self.luminosite = 0
+        self.contraste = 0
+        self.saturation = 0
+        self.exposition = 0
+        self.temperature = 0
+        self.teinte = 0
+        self.nettete = 0
+        self.flou = 0
+        
     def get_valeur(self, cle, defaut=None):
         return getattr(self, cle, defaut)
     

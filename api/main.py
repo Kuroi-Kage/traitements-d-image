@@ -10,7 +10,7 @@ from services.interpreteur import Interpreteur
 from api.session import session
 from traitements.traitements_image import (
     Binarisation, ConversionNiveauGris, DetectionContours, 
-    EgalisationHistogramme, Filtrage,Rotation, Recadrage, Redimensionnement
+    EgalisationHistogramme, Filtrage,Rotation, Recadrage, Redimensionnement, Effacement, Amelioration
 )
 
 app = FastAPI(title="API de traitement d'image")
@@ -30,12 +30,16 @@ app.add_middleware(
 TRAITEMENTS = {
     "egalisation": EgalisationHistogramme,
     "niveaux_de_gris": ConversionNiveauGris,
+    "niveau_de_gris": ConversionNiveauGris,
     "binarisation": Binarisation,
     "filtrage": Filtrage,
     "contours": DetectionContours,
      "rotation": Rotation,
     "recadrage": Recadrage,
     "redimensionnement": Redimensionnement,
+    "effacement": Effacement,
+    "amelioration": Amelioration,
+    
 }
 
 class ParametreRequete(BaseModel):

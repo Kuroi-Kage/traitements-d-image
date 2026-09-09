@@ -4,7 +4,7 @@ import os
 import google.generativeai as genai
 
 NOMS_TRAITEMENTS_VALIDES = {
-    "egalisation", "niveaux_de_gris", "binarisation", "filtrage", "contours" "rotation", "recadrage", "redimensionnement",
+    "egalisation", "niveaux_de_gris", "binarisation", "filtrage", "contours" "rotation", "recadrage", "redimensionnement", "effacement", "amelioration"
 }
 
 PROMPT_SYSTEME = """Tu es un assistant qui traduit une demande de traitement

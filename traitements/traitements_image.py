@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 from traitements.traitements import Traitement
 
 class EgalisationHistogramme(Traitement):
@@ -78,3 +79,72 @@ class Recadrage(Traitement):
         largeur = params.get_valeur("crop_largeur") or largeur_image
         hauteur = params.get_valeur("crop_hauteur") or hauteur_image
         return image[y:y + hauteur, x:x + largeur]
+    
+
+class Effacement(Traitement):
+    nom = "Effacement"
+    
+    def appliquer(self, image, params):
+        x = params.get_valeur("crop_x", 0)
+        y = params.get_valeur("crop_y",0)
+        largeur = params.get_valeur("crop_largeur") or 0
+        hauteur = params.get_valeur("crop_hauteur") or 0
+        
+        resultat = image.copy()
+        resultat[y:y + hauteur, x:x + largeur] = 255
+        return resultat
+    
+class Amelioration(Traitement):
+    nom = "Amelioration"
+    
+    def appliquer(self, image, params):
+        resultat = image.copy().astype(np.float32)
+        
+        temperature = params.get_valeur("temperature", 0)
+        if temperature != 0:
+            resultat[:, :, 2] = np.clip(resultat[:, :, 2] + temperature, 0, 255)
+            resultat[:, :, 0] = np.clip(resultat[:, :, 0] - temperature, 0, 255)
+         
+         
+         #luminosite   
+        luminosite = params.get_valeur("luminosite", 0)
+        contraste = params.get_valeur("contraste", 0)
+        facteur_contraste = 1 + (contraste / 100)
+        resultat = np.clip(resultat * facteur_contraste + luminosite, 0, 255)
+       
+        #exposition
+        exposition = params.get_valeur("exposition", 0)
+        if exposition != 0:
+            resultat = np.clip(resultat *(1 + exposition/ 100), 0, 255)
+            
+        resultat = resultat.astype(np.uint8)
+        
+        #saturation
+        saturation = params.get_valeur("saturation", 0)
+        teinte = params.get_valeur("teinte", 0)
+        if saturation != 0 or teinte != 0:
+            hsv = cv2.cvtColor(resultat, cv2.COLOR_BGR2HSV).astype(np.float32)
+            if teinte != 0:
+                hsv[:, :, 0] = (hsv[:, :, 0] + teinte / 2 ) % 180
+            if saturation != 0:
+                hsv[:, :, 1] = np.clip(hsv[:, :, 1] * (1 + saturation / 100), 0, 255)
+            resultat = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+            
+        #  Nettete
+        nettete = params.get_valeur("nettete", 0)
+        if nettete > 0:
+            flou_gaussien = cv2.GaussianBlur(resultat, (0, 0), 3)
+            resultat = cv2.addWeighted(
+                resultat, 1 + nettete / 100, flou_gaussien, -(nettete / 100), 0
+            )
+            
+        # Flou
+        flou = params.get_valeur("flou", 0)
+        if flou > 0:
+            taille = flou if flou % 2 == 1 else flou + 1
+            resultat = cv2.GaussianBlur(resultat, (taille, taille), 0)
+            
+        return resultat
+
+    
+    
