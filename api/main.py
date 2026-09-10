@@ -49,6 +49,14 @@ class ParametreRequete(BaseModel):
 class InstructionsRequete(BaseModel):
     instructions: str
     
+class OrdreCalqueRequete(BaseModel):
+    ordre: list[str]
+    
+class ReglageCalqueRequete(BaseModel):
+    visible: bool | None = None
+    opacite: int | None = None
+    mode_fusion: str | None = None
+    
 def image_vers_base64(image: np.ndarray) -> str:
     succes, buffer = cv2.imencode(".png", image)
     if not succes:
@@ -178,3 +186,67 @@ def exporter_image(session_id: str):
         media_type="image/png",
         headers={"Content-Disposition": "attachment; filename=image_exportee.png"}
     )
+    
+@app.post("/api/images/{session_id}/calques")
+def ajouter_calque(session_id: str):
+    try:
+        controleur = session.obtenir(session_id)
+        calque = controleur.modele.ajouter_calque()
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Session inconnue")
+
+    return {"id": calque.id, "image": image_vers_base64(calque.image)}
+
+
+@app.delete("/api/images/{session_id}/calques/{calque_id}")
+def supprimer_calque(session_id: str, calque_id: str):
+    try:
+        controleur = session.obtenir(session_id)
+        controleur.modele.supprimer_calque(calque_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Session ou calque inconnu")
+
+    return {"ok": True}
+
+
+@app.patch("/api/images/{session_id}/calques/{calque_id}")
+def regler_calque(session_id: str, calque_id: str, reglages: ReglageCalqueRequete):
+    try:
+        controleur = session.obtenir(session_id)
+        calque = controleur.modele.obtenir_calque(calque_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Session ou calque inconnu")
+
+    if reglages.visible is not None:
+        calque.visible = reglages.visible
+    if reglages.opacite is not None:
+        calque.opacite = max(0, min(100, reglages.opacite))
+    if reglages.mode_fusion is not None:
+        calque.mode_fusion = reglages.mode_fusion
+
+    return {"ok": True}
+
+
+@app.post("/api/images/{session_id}/calques/ordre")
+def reordonner_calques(session_id: str, requete: OrdreCalqueRequete):
+    try:
+        controleur = session.obtenir(session_id)
+        calques_par_id = {c.id: c for c in controleur.modele.calques}
+        controleur.modele.calques = [calques_par_id[cid] for cid in requete.ordre if cid in calques_par_id]
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Session inconnue")
+
+    return {"ok": True}
+
+
+@app.post("/api/images/{session_id}/calques/fusionner")
+def fusionner_calques(session_id: str):
+    try:
+        controleur = session.obtenir(session_id)
+        resultat = controleur.modele.fusionner_calques()
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Session inconnue")
+    except ValueError as erreur:
+        raise HTTPException(status_code=400, detail=str(erreur))
+
+    return {"image": image_vers_base64(resultat)}
